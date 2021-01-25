@@ -16,12 +16,17 @@ import {
   Text,
   useTheme,
   VStack,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from "@chakra-ui/react";
 import MultiSlider from "multi-slider";
 
 import React, { useState } from "react";
 import "./App.css";
-import { add } from "./utils";
+import { add, runningTotal } from "./utils";
 
 const range = (length = 20, unit = 8, multi: number) =>
   Array(length)
@@ -36,23 +41,19 @@ const scales = {
   fibonacci: [0, 1, 2, 3, 5, 8, 13, 21, 34],
 };
 
+const namedScaleLabel = ["xxs", "xs", "s", "m", "l", "xl", "xxl"];
+
 function App() {
   const [baseUnit, setBaseUnit] = useState(8);
-  const [multi, setMulti] = useState(1);
-
-  // const [div1, setStep1] = useState(4);
-  // const [div2, setStep2] = useState(2);
-  // const [div3, setStep3] = useState(1);
-  // const [div4, setStep4] = useState(1);
 
   const theme = useTheme();
 
   const [stepsCount, setStepsCount] = useState([1, 6, 5, 3, 3, 2]);
   const [dividends, setDividends] = useState([4, 2, 1, 0.5, 0.25, 0.125]);
 
-  const [namedCount, setNamedCount] = useState([1, 2, 3, 5, 8, 13, 17]);
+  const [namedCount, setNamedCount] = useState([3, 2, 3, 4, 2, 2, 3, 0]);
 
-  let namedCountSum = 0;
+  let namedCountSum = -1;
 
   let prevLast = 0;
   let prevRange = [0];
@@ -94,11 +95,13 @@ function App() {
     theme.colors.red[400],
   ];
 
-  const steps = stepsCount.reduce<{
-    index: number;
-    bg: string;
-    values: number;
-  }>((acc, step, stepIndex) => {
+  const steps = stepsCount.reduce<
+    {
+      index: number;
+      bg: string;
+      values: number;
+    }[]
+  >((acc, step, stepIndex) => {
     // To make sure the sum fit
     prev -= prev % (baseUnit / dividends[stepIndex]);
 
@@ -121,71 +124,28 @@ function App() {
 
   return (
     <Container className="App">
-      <Box p={4}>
-        <HStack>
-          <FormControl id="amount">
-            <FormLabel>Base Unit</FormLabel>
-            <NumberInput
-              size="xs"
-              min={0.1}
-              value={baseUnit}
-              onChange={(valueString) => setBaseUnit(Number(valueString))}
-            >
-              <NumberInputField />
-              <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
-              </NumberInputStepper>
-            </NumberInput>
-          </FormControl>
-          <FormControl id="multiplier">
-            <FormLabel>Tail multiplier</FormLabel>
-            <NumberInput
-              size="xs"
-              min={0}
-              value={multi}
-              onChange={(valueString) => setMulti(Number(valueString))}
-              step={0.01}
-            >
-              <NumberInputField />
-              <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
-              </NumberInputStepper>
-            </NumberInput>
-          </FormControl>
-        </HStack>
-
-        <MultiSlider
-          handleSize={6}
-          padX={12}
-          handleInnerDotSize={5}
-          trackSize={3}
-          bg="rgba(0,0,0, .2)"
-          handleStrokeSize={0}
-          onChange={setNamedCount}
-          colors={["#eee", ...colors]}
-          defaultValues={namedCount}
-        />
-
-        <MultiSlider
-          handleSize={6}
-          padX={12}
-          handleInnerDotSize={5}
-          trackSize={3}
-          bg="rgba(0,0,0, .2)"
-          handleStrokeSize={0}
-          onChange={setStepsCount}
-          colors={colors}
-          defaultValues={stepsCount}
-        />
-        {stepsCount.join(", ")}
-
-        <HStack>
-          {dividends.map((division, i) => (
-            <VStack>
-              <Code>{(baseUnit / division).toFixed(2)}</Code>
-              <FormControl id="step1">
+      <Box>
+        <HStack justify="space-between" p={4}>
+          <HStack>
+            <FormControl id="amount">
+              <FormLabel>Base Unit</FormLabel>
+              <HStack justify="space-between">
+                <NumberInput
+                  size="xs"
+                  min={0.1}
+                  value={baseUnit}
+                  onChange={(valueString) => setBaseUnit(Number(valueString))}
+                >
+                  <NumberInputField />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
+                {dividends.map((division, i) => (
+                  <VStack>
+                    <Code>{(baseUnit / division).toFixed(2)}</Code>
+                    {/* <FormControl id="step1">
                 <NumberInput
                   size="xs"
                   min={0}
@@ -202,57 +162,58 @@ function App() {
                     <NumberDecrementStepper />
                   </NumberInputStepper>
                 </NumberInput>
-              </FormControl>
-            </VStack>
-          ))}
+              </FormControl> */}
+                  </VStack>
+                ))}
+              </HStack>
+            </FormControl>
+          </HStack>
         </HStack>
       </Box>
+      <Tabs>
+        <TabList>
+          <Tab>Numeric</Tab>
+          <Tab>Named</Tab>
+        </TabList>
 
-      <VStack
-        align="flex-start"
-        spacing="10"
-        divider={<StackDivider borderColor="gray.200" />}
-      >
-        <VStack align="flex-start" spacing="3">
-          {steps.slice(namedCount[0]).map(({ index, bg, value }, i) => {
-            const isIncluded = scales.fibonacci.includes(i + 1);
-
-
-            return (
-              isIncluded && (
-                <Box
-                  sx={{
-                    boxSize: `${value}px`,
-                    my: 4,
-                    fontSize: 10,
-                    whiteSpace: "nowrap",
-                  }}
-                  bg={colors[i % colors.length]}
-                  value={value}
-                >
-                  {value}
-                </Box>
-              )
-            );
-          })}
-        </VStack>
-
-        {(prev = 0)}
-        {(stepsSum = 0)}
-        <VStack align="flex-start" spacing="xs">
-          <ScaleItem index={0} value={0} bg={colors[0]} />
-          {steps.map(({ index, bg, value }) => (
-            <ScaleItem
-              index={index}
-              // index={baseUnit / dividends[stepIndex]}
-              bg={bg}
-              value={value}
+        <TabPanels>
+          <TabPanel>
+            <MultiSlider
+              handleSize={6}
+              padX={12}
+              handleInnerDotSize={5}
+              trackSize={3}
+              bg="rgba(0,0,0, .2)"
+              handleStrokeSize={0}
+              onChange={setStepsCount}
+              colors={colors}
+              defaultValues={stepsCount}
             />
-          ))}
-        </VStack>
-        {(prev = 0)}
-        {/* <ScaleItem index={1} value={baseUnit} /> */}
-        {/* <VStack align="flex-start" spacing="xs">
+            {/* {stepsCount.join(", ")} */}
+            <VStack
+              align="flex-start"
+              spacing="10"
+              divider={<StackDivider borderColor="gray.200" />}
+            >
+              {(prev = 0)}
+              {(stepsSum = 0)}
+              <VStack align="flex-start" spacing="xs">
+                <ScaleItem index={0} value={0} bg={colors[0]} />
+                {steps.map(({ index, bg, value }, i) => (
+                  <ScaleItem
+                    index={index}
+                    // index={baseUnit / dividends[stepIndex]}
+                    highlighted={namedCount
+                      .reduce(runningTotal, [])
+                      .includes(i + 1)}
+                    bg={bg}
+                    value={value}
+                  />
+                ))}
+              </VStack>
+              {(prev = 0)}
+              {/* <ScaleItem index={1} value={baseUnit} /> */}
+              {/* <VStack align="flex-start" spacing="xs">
           <ScaleItem index={0} value={0} />
           {Array(step1)
             .fill(0)
@@ -300,15 +261,87 @@ function App() {
               );
             })}
         </VStack> */}
-      </VStack>
+            </VStack>
+          </TabPanel>
+
+          <TabPanel>
+            <MultiSlider
+              handleSize={6}
+              padX={12}
+              handleInnerDotSize={5}
+              trackSize={3}
+              bg="rgba(0,0,0, .2)"
+              handleStrokeSize={0}
+              onChange={setNamedCount}
+              colors={colors}
+              defaultValues={namedCount}
+            />
+            {/* <p>
+              Running:
+              {namedCount.reduce(runningTotal, []).join(", ")}
+            </p> */}
+            {/* NAMED SCALE */}
+            <VStack
+              align="flex-start"
+              spacing="10"
+              divider={<StackDivider borderColor="gray.200" />}
+            >
+              <VStack align="flex-start" spacing="2">
+                {steps.map(({ value }, i) => {
+                  const isIncluded = namedCount
+                    .reduce(runningTotal, [])
+                    .includes(i + 1);
+
+                  if (isIncluded) namedCountSum++;
+
+                  if (namedCountSum > namedScaleLabel.length - 1) return null;
+
+                  return (
+                    isIncluded && (
+                      <HStack align="center">
+                        <Text
+                          sx={{
+                            fontSize: 12,
+                            lineHeight: 1,
+                            fontWeight: "bold",
+                            textAlign: "left",
+                          }}
+                          w="40px"
+                        >
+                          {namedScaleLabel[namedCountSum]}
+                        </Text>
+
+                        <Text sx={{ fontSize: 12, lineHeight: 1 }} w="40px">
+                          {value.toFixed(2).replace(".00", "")}px
+                        </Text>
+                        <Box
+                          sx={{
+                            boxSize: `${value}px`,
+                            fontSize: 10,
+                            whiteSpace: "nowrap",
+                          }}
+                          bg={colors[namedCountSum % colors.length]}
+                        ></Box>
+                      </HStack>
+                    )
+                  );
+                })}
+              </VStack>
+            </VStack>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </Container>
   );
 }
 
-const ScaleItem: React.FC<{ index?: number; value: number } & StackProps> = ({
+const ScaleItem: React.FC<
+  { index?: number; value: number; highlighted: boolean } & StackProps
+> = ({
   value: valueInitial,
   index,
   bg = "blue.100",
+  highlighted = false,
   ...props
 }) => {
   // const value = Math.round(valueInitial);
@@ -316,7 +349,14 @@ const ScaleItem: React.FC<{ index?: number; value: number } & StackProps> = ({
   return (
     <HStack align="flex-start" {...props} spacing="0">
       <Code w="40px">{index}</Code>
-      <Text sx={{ fontSize: 12, lineHeight: 1 }} w="80px">
+      <Text
+        sx={{
+          fontSize: 12,
+          lineHeight: 1,
+          fontWeight: highlighted ? "bold" : "normal",
+        }}
+        w="80px"
+      >
         {value.toFixed(2).replace(".00", "")}px
       </Text>
 
