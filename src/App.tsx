@@ -21,12 +21,21 @@ import {
   TabPanels,
   Tab,
   TabPanel,
+  Grid,
 } from "@chakra-ui/react";
+import { useControls } from "leva";
 import MultiSlider from "multi-slider";
 
 import React, { useState } from "react";
 import "./App.css";
+import { getColumnWidth } from "./space";
 import { add, runningTotal } from "./utils";
+
+type Step = {
+  index: number;
+  bg: string;
+  values: number;
+};
 
 const range = (length = 20, unit = 8, multi: number) =>
   Array(length)
@@ -48,10 +57,27 @@ function App() {
 
   const theme = useTheme();
 
-  const [stepsCount, setStepsCount] = useState([1, 6, 5, 3, 3, 2]);
-  const [dividends, setDividends] = useState([4, 2, 1, 0.5, 0.25, 0.125]);
+  const [stepsCount, setStepsCount] = useState([0, 1, 5, 8, 4, 2]);
+  console.log("stepsCount: ", stepsCount);
+  // const [dividends, setDividends] = useState([
+  // 1 * 2 ** 2,
+  // 1 * 2 ** 1,
+  // 1,
+  // 1 / 2,
+  //   1 / 2 ** 2,
+  //   1 / 2 ** 3,
+  // ]);
+  const [dividends, setDividends] = useState([
+    1,
+    1 / 2 ** 1,
+    1 / 2 ** 2,
+    1 / 2 ** 3,
+    1 / 2 ** 4 * 1.6, // little help because 1440 and 1600 are hard to find
+    1 / 2 ** 5,
+  ]); // breakpoints needs bigger dividends
 
-  const [namedCount, setNamedCount] = useState([3, 2, 3, 4, 2, 2, 3, 0]);
+  const [namedCount, setNamedCount] = useState([6, 4, 2, 3, 1, 2, 1, 0]);
+  console.log('namedCount: ', namedCount);
 
   let namedCountSum = -1;
 
@@ -95,17 +121,13 @@ function App() {
     theme.colors.red[400],
   ];
 
-  const steps = stepsCount.reduce<
-    {
-      index: number;
-      bg: string;
-      values: number;
-    }[]
-  >((acc, step, stepIndex) => {
+  // @ts-ignore
+  const steps = stepsCount.reduce<Step>((acc, step, stepIndex) => {
     // To make sure the sum fit
     prev -= prev % (baseUnit / dividends[stepIndex]);
 
     return [
+      // @ts-ignore
       ...acc,
       ...Array(step)
         .fill(0)
@@ -122,30 +144,97 @@ function App() {
     ];
   }, []);
 
+  const { base, columnWidth, gap, lines } = useControls({
+    base: 4,
+    columnWidth: 16,
+    gap: 8,
+    lines: 18,
+  });
+
+  const grid = {
+    gap: base * gap,
+    column: base * columnWidth,
+    container: getColumnWidth(12, base * columnWidth, base * gap),
+  };
+
   return (
-    <Container className="App">
-      <Box>
-        <HStack justify="space-between" p={4}>
-          <HStack>
-            <FormControl id="amount">
-              <FormLabel>Base Unit</FormLabel>
-              <HStack justify="space-between">
-                <NumberInput
-                  size="xs"
-                  min={0.1}
-                  value={baseUnit}
-                  onChange={(valueString) => setBaseUnit(Number(valueString))}
-                >
-                  <NumberInputField />
-                  <NumberInputStepper>
-                    <NumberIncrementStepper />
-                    <NumberDecrementStepper />
-                  </NumberInputStepper>
-                </NumberInput>
-                {dividends.map((division, i) => (
-                  <VStack>
-                    <Code>{(baseUnit / division).toFixed(2)}</Code>
-                    {/* <FormControl id="step1">
+    <>
+      <ScaleItem index={"Gap"} value={grid.gap} bg={colors[1]} />
+      <ScaleItem index={"Col"} value={grid.column} bg={colors[2]} />
+      <ScaleItem index={"12"} value={grid.container} bg={colors[3]} />
+
+      <br />
+
+      <VStack align="flex-start">
+        {Array(lines)
+          .fill(0)
+          .map((_, i) => {
+            const value = getColumnWidth(i + 1, base * columnWidth, base * gap);
+            const maxWidth = getColumnWidth(
+              lines + 2,
+              base * columnWidth,
+              base * gap
+            );
+
+            return (
+              <div>
+                <ScaleItem
+                  w={maxWidth}
+                  index={i + 1}
+                  value={value}
+                  bg={colors[0]}
+                  highlighted={[
+                    320, 384, 480, 576, 768, 1024, 1440, 1600,
+                  ].includes(value)}
+                />
+                <ScaleItem
+                  w={maxWidth + base * gap}
+                  index={i + 1 + "+"}
+                  value={value + base * gap}
+                  bg={"rgba(0,0,0,.2)"}
+                  highlighted={[
+                    320, 384, 480, 576, 768, 1024, 1440, 1600,
+                  ].includes(value + base * gap)}
+                />
+              </div>
+            );
+          })}
+      </VStack>
+
+      <Container w={grid.container + "px"} maxW={grid.container + "px"}>
+        <Grid gap={grid.gap + "px"} w="100%" templateColumns="repeat(12, 1fr)">
+          {Array(12)
+            .fill(0)
+            .map((_, i) => (
+              <Box bg="rgba(255,0,0, .3)" h={400}>
+                {i + 1}
+              </Box>
+            ))}
+        </Grid>
+      </Container>
+      <Container className="App">
+        <Box>
+          <HStack justify="space-between" p={4}>
+            <HStack>
+              <FormControl id="amount">
+                <FormLabel>Base Unit</FormLabel>
+                <HStack justify="space-between">
+                  <NumberInput
+                    size="xs"
+                    min={0.1}
+                    value={baseUnit}
+                    onChange={(valueString) => setBaseUnit(Number(valueString))}
+                  >
+                    <NumberInputField />
+                    <NumberInputStepper>
+                      <NumberIncrementStepper />
+                      <NumberDecrementStepper />
+                    </NumberInputStepper>
+                  </NumberInput>
+                  {dividends.map((division, i) => (
+                    <VStack>
+                      <Code>{(baseUnit / division).toFixed(2)}</Code>
+                      {/* <FormControl id="step1">
                 <NumberInput
                   size="xs"
                   min={0}
@@ -163,57 +252,64 @@ function App() {
                   </NumberInputStepper>
                 </NumberInput>
               </FormControl> */}
-                  </VStack>
-                ))}
-              </HStack>
-            </FormControl>
+                    </VStack>
+                  ))}
+                </HStack>
+              </FormControl>
+            </HStack>
           </HStack>
-        </HStack>
-      </Box>
-      <Tabs>
-        <TabList>
-          <Tab>Numeric</Tab>
-          <Tab>Named</Tab>
-        </TabList>
+        </Box>
+      </Container>
+      <Container className="App">
+        <Tabs>
+          <TabList>
+            <Tab>Numeric</Tab>
+            <Tab>Named</Tab>
+          </TabList>
 
-        <TabPanels>
-          <TabPanel>
-            <MultiSlider
-              handleSize={6}
-              padX={12}
-              handleInnerDotSize={5}
-              trackSize={3}
-              bg="rgba(0,0,0, .2)"
-              handleStrokeSize={0}
-              onChange={setStepsCount}
-              colors={colors}
-              defaultValues={stepsCount}
-            />
-            {/* {stepsCount.join(", ")} */}
-            <VStack
-              align="flex-start"
-              spacing="10"
-              divider={<StackDivider borderColor="gray.200" />}
-            >
-              {(prev = 0)}
-              {(stepsSum = 0)}
-              <VStack align="flex-start" spacing="xs">
-                <ScaleItem index={0} value={0} bg={colors[0]} />
-                {steps.map(({ index, bg, value }, i) => (
-                  <ScaleItem
-                    index={index}
-                    // index={baseUnit / dividends[stepIndex]}
-                    highlighted={namedCount
-                      .reduce(runningTotal, [])
-                      .includes(i + 1)}
-                    bg={bg}
-                    value={value}
-                  />
-                ))}
-              </VStack>
-              {(prev = 0)}
-              {/* <ScaleItem index={1} value={baseUnit} /> */}
-              {/* <VStack align="flex-start" spacing="xs">
+          <TabPanels>
+            <TabPanel>
+              <MultiSlider
+                handleSize={6}
+                padX={12}
+                handleInnerDotSize={5}
+                trackSize={3}
+                bg="rgba(0,0,0, .2)"
+                handleStrokeSize={0}
+                onChange={setStepsCount}
+                colors={colors}
+                defaultValues={stepsCount}
+              />
+              {/* {stepsCount.join(", ")} */}
+              <VStack
+                align="flex-start"
+                spacing="10"
+                divider={<StackDivider borderColor="gray.200" />}
+              >
+                {(prev = 0)}
+                {(stepsSum = 0)}
+                <VStack align="flex-start" spacing="xs">
+                  <ScaleItem index={0} value={0} bg={colors[0]} />
+                  {/* @ts-ignore */}
+                  {steps.map(({ index, bg, value: dValue }, i) => {
+                    const value = dValue * 2;
+
+                    return (
+                      <ScaleItem
+                        index={index}
+                        // index={baseUnit / dividends[stepIndex]}
+                        highlighted={namedCount
+                          .reduce(runningTotal, [])
+                          .includes(i + 1)}
+                        bg={bg}
+                        value={value}
+                      />
+                    );
+                  })}
+                </VStack>
+                {(prev = 0)}
+                {/* <ScaleItem index={1} value={baseUnit} /> */}
+                {/* <VStack align="flex-start" spacing="xs">
           <ScaleItem index={0} value={0} />
           {Array(step1)
             .fill(0)
@@ -261,82 +357,90 @@ function App() {
               );
             })}
         </VStack> */}
-            </VStack>
-          </TabPanel>
+              </VStack>
+            </TabPanel>
 
-          <TabPanel>
-            <MultiSlider
-              handleSize={6}
-              padX={12}
-              handleInnerDotSize={5}
-              trackSize={3}
-              bg="rgba(0,0,0, .2)"
-              handleStrokeSize={0}
-              onChange={setNamedCount}
-              colors={colors}
-              defaultValues={namedCount}
-            />
-            {/* <p>
+            <TabPanel>
+              <MultiSlider
+                handleSize={6}
+                padX={12}
+                handleInnerDotSize={5}
+                trackSize={3}
+                bg="rgba(0,0,0, .2)"
+                handleStrokeSize={0}
+                onChange={setNamedCount}
+                colors={colors}
+                defaultValues={namedCount}
+              />
+              {/* <p>
               Running:
               {namedCount.reduce(runningTotal, []).join(", ")}
             </p> */}
-            {/* NAMED SCALE */}
-            <VStack
-              align="flex-start"
-              spacing="10"
-              divider={<StackDivider borderColor="gray.200" />}
-            >
-              <VStack align="flex-start" spacing="2">
-                {steps.map(({ value }, i) => {
-                  const isIncluded = namedCount
-                    .reduce(runningTotal, [])
-                    .includes(i + 1);
+              {/* NAMED SCALE */}
+              <VStack
+                align="flex-start"
+                spacing="10"
+                divider={<StackDivider borderColor="gray.200" />}
+              >
+                <VStack align="flex-start" spacing="2">
+                  {/* @ts-ignore */}
+                  {steps.map(({ value: dValue }, i) => {
+                    const value = dValue * 2;
+                    const isIncluded = namedCount
+                      .reduce(runningTotal, [])
+                      .includes(i + 1);
 
-                  if (isIncluded) namedCountSum++;
+                    if (isIncluded) namedCountSum++;
 
-                  if (namedCountSum > namedScaleLabel.length - 1) return null;
+                    if (namedCountSum > namedScaleLabel.length - 1) return null;
 
-                  return (
-                    isIncluded && (
-                      <HStack align="center">
-                        <Text
-                          sx={{
-                            fontSize: 12,
-                            lineHeight: 1,
-                            fontWeight: "bold",
-                            textAlign: "left",
-                          }}
-                          w="40px"
-                        >
-                          {namedScaleLabel[namedCountSum]}
-                        </Text>
+                    return (
+                      isIncluded && (
+                        <HStack align="center">
+                          <Text
+                            sx={{
+                              fontSize: 12,
+                              lineHeight: 1,
+                              fontWeight: "bold",
+                              textAlign: "left",
+                            }}
+                            w="40px"
+                          >
+                            {namedScaleLabel[namedCountSum]}
+                          </Text>
 
-                        <Text sx={{ fontSize: 12, lineHeight: 1 }} w="40px">
-                          {value.toFixed(2).replace(".00", "")}px
-                        </Text>
-                        <Box
-                          sx={{
-                            boxSize: `${value}px`,
-                            fontSize: 10,
-                            whiteSpace: "nowrap",
-                          }}
-                          bg={colors[namedCountSum % colors.length]}
-                        ></Box>
-                      </HStack>
-                    )
-                  );
-                })}
+                          <Text sx={{ fontSize: 12, lineHeight: 1 }} w="40px">
+                            {value.toFixed(2).replace(".00", "")}px
+                          </Text>
+                          <Box
+                            sx={{
+                              // boxSize: `${value}px`,
+                              w: `${value}px`,
+                              h: "8px",
+                              fontSize: 10,
+                              whiteSpace: "nowrap",
+                            }}
+                            bg={colors[namedCountSum % colors.length]}
+                          ></Box>
+                          {/* <Text sx={{ fontSize: `${value}px`, lineHeight: 1 }}>
+                            Title
+                          </Text> */}
+                        </HStack>
+                      )
+                    );
+                  })}
+                </VStack>
               </VStack>
-            </VStack>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </Container>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Container>
+    </>
   );
 }
 
 const ScaleItem: React.FC<
-  { index?: number; value: number; highlighted: boolean } & StackProps
+  { index?: number | string; value: number; highlighted?: boolean } & StackProps
 > = ({
   value: valueInitial,
   index,
@@ -347,13 +451,16 @@ const ScaleItem: React.FC<
   // const value = Math.round(valueInitial);
   const value = valueInitial;
   return (
-    <HStack align="flex-start" {...props} spacing="0">
-      <Code w="40px">{index}</Code>
+    <HStack align="center" {...props} spacing="1">
+      <Code w="40px" sx={{ fontWeight: highlighted ? "bold" : "normal" }}>
+        {index}
+      </Code>
       <Text
         sx={{
           fontSize: 12,
           lineHeight: 1,
           fontWeight: highlighted ? "bold" : "normal",
+          bg: highlighted ? "yellow.100" : undefined,
         }}
         w="80px"
       >
